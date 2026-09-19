@@ -4,27 +4,39 @@ const fs = require("fs");
 const path = require("path");
 require("dotenv").config();
 
+const { GoogleGenAI } = require("@google/genai");
+
 const app = express();
 
 const PORT = process.env.PORT || 5000;
+
+// ======================================================
+// GEMINI
+// ======================================================
+
+const gemini = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY
+});
 
 // ======================================================
 // CONFIG
 // ======================================================
 
 const PRO_DURATION_DAYS = 30;
+
 const PRO_DURATION_MS =
   PRO_DURATION_DAYS * 24 * 60 * 60 * 1000;
 
-const PAYMENTS_FILE = path.join(__dirname, "payments.json");
+const PAYMENTS_FILE =
+  path.join(__dirname, "payments.json");
 
 // ======================================================
 // API KEY STATUS
 // ======================================================
 
 console.log(
-  "OPENAI API KEY LOADED:",
-  Boolean(process.env.OPENAI_API_KEY)
+  "GEMINI API KEY LOADED:",
+  Boolean(process.env.GEMINI_API_KEY)
 );
 
 console.log(
@@ -37,6 +49,7 @@ console.log(
 // ======================================================
 
 app.use(cors());
+
 app.use(express.json());
 
 // ======================================================
@@ -50,15 +63,24 @@ function loadPayments() {
       return [];
     }
 
-    const data = fs.readFileSync(PAYMENTS_FILE, "utf8");
+    const data =
+      fs.readFileSync(
+        PAYMENTS_FILE,
+        "utf8"
+      );
 
     if (!data.trim()) {
       return [];
     }
 
     return JSON.parse(data);
+
   } catch (error) {
-    console.error("Error loading payments:", error);
+    console.error(
+      "Error loading payments:",
+      error
+    );
+
     return [];
   }
 }
@@ -66,7 +88,11 @@ function loadPayments() {
 function savePayments(payments) {
   fs.writeFileSync(
     PAYMENTS_FILE,
-    JSON.stringify(payments, null, 2)
+    JSON.stringify(
+      payments,
+      null,
+      2
+    )
   );
 }
 
@@ -91,7 +117,10 @@ function isProActive(payment) {
     return false;
   }
 
-  const expiryTime = new Date(payment.expiresAt).getTime();
+  const expiryTime =
+    new Date(
+      payment.expiresAt
+    ).getTime();
 
   if (Number.isNaN(expiryTime)) {
     return false;
@@ -101,29 +130,39 @@ function isProActive(payment) {
 }
 
 // ======================================================
-// OPENAI CHAT
+// GEMINI SYSTEM PROMPT
 // ======================================================
 
-function buildSystemPrompt(settings = {}) {
+function buildSystemPrompt(
+  settings = {}
+) {
   const personality =
-    settings.personality || "Friendly, helpful and clear";
+    settings.personality ||
+    "Friendly, helpful and clear";
 
   const language =
-    settings.language || "English";
+    settings.language ||
+    "English";
 
   return `
-You are Shree AI.
+    You are Shree AI.
 
-Personality:
-${personality}
 
-Preferred language:
-${language}
+    Personality:
+    ${personality}
 
-Be helpful, clear and beginner-friendly.
+    Preferred language:
+    ${language}
 
-If the user asks programming questions,
-explain things simply and provide working examples.
+    Be helpful, clear and beginner-friendly.
+
+    If the user asks programming questions,
+    explain things simply and provide working examples.
+
+    Use Markdown when it improves readability.
+
+    Do not mention that you are Gemini unless
+    the user specifically asks which AI model you use.
 `;
 }
 
@@ -134,182 +173,267 @@ explain things simply and provide working examples.
 app.get("/", (req, res) => {
   res.json({
     success: true,
-    message: "Shree AI Backend is running 🤖",
-    status: "online"
+
+    message:
+      "Shree AI Backend is running 🤖",
+
+    status:
+      "online"
   });
 });
 
 // ======================================================
-// CHAT
+// GEMINI CHAT
 // ======================================================
 
-app.post("/api/chat", async (req, res) => {
-  try {
-    const { message, history = [], settings = {} } = req.body;
+app.post(
+  "/api/chat",
+  async (req, res) => {
+    try {
+      const {
+        message,
+        history = [],
+        settings = {}
+      } = req.body;
 
-    if (!message || !message.trim()) {
-      return res.status(400).json({
-        success: false,
-        error: "Message is required"
-      });
-    }
+      // ----------------------------------------------
+      // CHECK MESSAGE
+      // ----------------------------------------------
 
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(500).json({
-        success: false,
-        error: "OpenAI API key is missing"
-      });
-    }
-
-    const messages = [
-      {
-        role: "system",
-        content: buildSystemPrompt(settings)
+      if (
+        !message ||
+        !message.trim()
+      ) {
+        return res.status(400).json({
+          success: false,
+          error:
+            "Message is required"
+        });
       }
-    ];
 
-    if (Array.isArray(history)) {
-      history
-        .slice(-10)
-        .forEach((item) => {
-          if (
-            item &&
-            (item.role === "user" ||
-              item.role === "assistant") &&
-            typeof item.content === "string"
-          ) {
-            messages.push({
-              role: item.role,
-              content: item.content
-            });
+      // ----------------------------------------------
+      // CHECK GEMINI API KEY
+      // ----------------------------------------------
+
+      if (
+        !process.env.GEMINI_API_KEY
+      ) {
+        return res.status(500).json({
+          success: false,
+          error:
+            "Gemini API key is missing"
+        });
+      }
+
+      // ----------------------------------------------
+      // CREATE CONTENTS
+      // ----------------------------------------------
+
+      const contents = [];
+
+      // ----------------------------------------------
+      // ADD CHAT HISTORY
+      // ----------------------------------------------
+
+      if (
+        Array.isArray(history)
+      ) {
+        history
+          .slice(-10)
+          .forEach((item) => {
+            if (
+              item &&
+              (
+                item.role === "user" ||
+                item.role === "assistant"
+              ) &&
+              typeof item.content ===
+                "string"
+            ) {
+              contents.push({
+                role:
+                  item.role ===
+                  "assistant"
+                    ? "model"
+                    : "user",
+
+                parts: [
+                  {
+                    text:
+                      item.content
+                  }
+                ]
+              });
+            }
+          });
+      }
+
+      // ----------------------------------------------
+      // ADD CURRENT MESSAGE
+      // ----------------------------------------------
+
+      contents.push({
+        role: "user",
+
+        parts: [
+          {
+            text:
+              message.trim()
+          }
+        ]
+      });
+
+      // ----------------------------------------------
+      // CALL GEMINI
+      // ----------------------------------------------
+
+      const response =
+        await gemini.models.generateContent({
+          model:
+            "gemini-3.8-flash",
+
+          contents,
+
+          config: {
+            systemInstruction:
+              buildSystemPrompt(
+                settings
+              ),
+
+            temperature:
+              0.7,
+
+            maxOutputTokens:
+              2048
           }
         });
-    }
 
-    messages.push({
-      role: "user",
-      content: message.trim()
-    });
+      // ----------------------------------------------
+      // GET GEMINI RESPONSE
+      // ----------------------------------------------
 
-    const response = await fetch(
-      "https://api.openai.com/v1/chat/completions",
-      {
-        method: "POST",
+      const reply =
+        response.text ||
+        "Sorry, I could not generate a response.";
 
-        headers: {
-          "Content-Type": "application/json",
-          Authorization:
-            `Bearer ${process.env.OPENAI_API_KEY}`
-        },
+      // ----------------------------------------------
+      // SEND RESPONSE
+      // ----------------------------------------------
 
-        body: JSON.stringify({
-          model: "gpt-4o-mini",
-          messages
-        })
-      }
-    );
+      res.json({
+        success: true,
+        reply
+      });
 
-    const data = await response.json();
+    } catch (error) {
+      console.error(
+        "Gemini chat error:",
+        error
+      );
 
-    if (!response.ok) {
-      console.error("OpenAI error:", data);
-
-      return res.status(response.status).json({
+      res.status(500).json({
         success: false,
+
         error:
-          data?.error?.message ||
-          "OpenAI request failed"
+          error?.message ||
+          "Gemini chat request failed"
       });
     }
-
-    const reply =
-      data?.choices?.[0]?.message?.content ||
-      "Sorry, I could not generate a response.";
-
-    res.json({
-      success: true,
-      reply
-    });
-
-  } catch (error) {
-    console.error("Chat error:", error);
-
-    res.status(500).json({
-      success: false,
-      error: "Chat request failed"
-    });
   }
-});
+);
 
 // ======================================================
 // IMAGE GENERATION
 // ======================================================
 
-app.post("/api/image", async (req, res) => {
-  try {
-    const { prompt } = req.body;
+app.post(
+  "/api/image",
+  async (req, res) => {
+    try {
+      const {
+        prompt
+      } = req.body;
 
-    if (!prompt || !prompt.trim()) {
-      return res.status(400).json({
-        success: false,
-        error: "Image prompt is required"
-      });
-    }
-
-    const encodedPrompt =
-      encodeURIComponent(prompt.trim());
-
-    const imageURL =
-      `https://gen.pollinations.ai/image/${encodedPrompt}` +
-      `?model=flux&width=768&height=768&nologo=true`;
-
-    const response = await fetch(imageURL, {
-      headers: {
-        Authorization:
-          `Bearer ${process.env.POLLINATIONS_API_KEY}`
+      if (
+        !prompt ||
+        !prompt.trim()
+      ) {
+        return res.status(400).json({
+          success: false,
+          error:
+            "Image prompt is required"
+        });
       }
-    });
 
-    if (!response.ok) {
-      const errorText = await response.text();
+      const encodedPrompt =
+        encodeURIComponent(
+          prompt.trim()
+        );
 
+      const imageURL =
+        `https://gen.pollinations.ai/image/${encodedPrompt}` +
+        `?model=flux&width=768&height=768&nologo=true`;
+
+      const response =
+        await fetch(
+          imageURL,
+          {
+            headers: {
+              Authorization:
+                `Bearer ${process.env.POLLINATIONS_API_KEY}`
+            }
+          }
+        );
+
+      if (!response.ok) {
+        const errorText =
+          await response.text();
+
+        console.error(
+          "Pollinations error:",
+          errorText
+        );
+
+        return res
+          .status(response.status)
+          .json({
+            success: false,
+            error:
+              "Image generation failed"
+          });
+      }
+
+      const buffer =
+        Buffer.from(
+          await response.arrayBuffer()
+        );
+
+      const base64 =
+        buffer.toString(
+          "base64"
+        );
+
+      res.json({
+        success: true,
+
+        image:
+          `data:image/png;base64,${base64}`
+      });
+
+    } catch (error) {
       console.error(
-        "Pollinations error:",
-        errorText
+        "Image generation error:",
+        error
       );
 
-      return res.status(response.status).json({
+      res.status(500).json({
         success: false,
-        error: "Image generation failed"
+        error:
+          "Image generation failed"
       });
     }
-
-    const buffer =
-      Buffer.from(
-        await response.arrayBuffer()
-      );
-
-    const base64 =
-      buffer.toString("base64");
-
-    res.json({
-      success: true,
-      image:
-        `data:image/png;base64,${base64}`
-    });
-
-  } catch (error) {
-    console.error(
-      "Image generation error:",
-      error
-    );
-
-    res.status(500).json({
-      success: false,
-      error: "Image generation failed"
-    });
   }
-});
+);
 
 // ======================================================
 // UPI PAYMENT INFORMATION
@@ -322,22 +446,32 @@ app.get(
       const amount = 199;
 
       const upiId =
-        process.env.UPI_ID || "yourupi@upi";
+        process.env.UPI_ID ||
+        "yourupi@upi";
 
       const upiName =
-        process.env.UPI_NAME || "Shree AI";
+        process.env.UPI_NAME ||
+        "Shree AI";
 
       const upiLink =
-        `upi://pay?pa=${encodeURIComponent(upiId)}` +
-        `&pn=${encodeURIComponent(upiName)}` +
+        `upi://pay?pa=${encodeURIComponent(
+          upiId
+        )}` +
+        `&pn=${encodeURIComponent(
+          upiName
+        )}` +
         `&am=${amount}` +
         `&cu=INR`;
 
       res.json({
         success: true,
+
         amount,
+
         upiId,
+
         upiName,
+
         upiLink
       });
 
@@ -349,7 +483,8 @@ app.get(
 
       res.status(500).json({
         success: false,
-        error: "Could not generate UPI information"
+        error:
+          "Could not generate UPI information"
       });
     }
   }
@@ -376,12 +511,14 @@ app.post(
       ) {
         return res.status(400).json({
           success: false,
+
           error:
             "Name, email and transaction ID are required"
         });
       }
 
-      const payments = loadPayments();
+      const payments =
+        loadPayments();
 
       // ----------------------------------------------
       // CHECK DUPLICATE TRANSACTION
@@ -390,16 +527,18 @@ app.post(
       const duplicate =
         payments.find(
           (payment) =>
+            payment.transactionId &&
             payment.transactionId
               .toLowerCase() ===
-            transactionId
-              .trim()
-              .toLowerCase()
+              transactionId
+                .trim()
+                .toLowerCase()
         );
 
       if (duplicate) {
         return res.status(400).json({
           success: false,
+
           error:
             "This transaction ID has already been submitted"
         });
@@ -417,7 +556,9 @@ app.post(
           name.trim(),
 
         email:
-          email.trim().toLowerCase(),
+          email
+            .trim()
+            .toLowerCase(),
 
         transactionId:
           transactionId.trim(),
@@ -447,14 +588,20 @@ app.post(
           null
       };
 
-      payments.push(payment);
+      payments.push(
+        payment
+      );
 
-      savePayments(payments);
+      savePayments(
+        payments
+      );
 
       res.json({
         success: true,
+
         message:
           "Payment submitted successfully. Waiting for verification.",
+
         payment
       });
 
@@ -466,7 +613,9 @@ app.post(
 
       res.status(500).json({
         success: false,
-        error: "Could not save payment"
+
+        error:
+          "Could not save payment"
       });
     }
   }
@@ -486,33 +635,55 @@ app.get(
       if (!email) {
         return res.status(400).json({
           success: false,
-          error: "Email is required"
+
+          error:
+            "Email is required"
         });
       }
 
       const payments =
         loadPayments();
 
-      // Find most recent payment for this email
+      // ----------------------------------------------
+      // FIND USER PAYMENTS
+      // ----------------------------------------------
+
       const userPayments =
         payments
           .filter(
             (payment) =>
               payment.email ===
-              email.trim().toLowerCase()
+              email
+                .trim()
+                .toLowerCase()
           )
           .sort(
             (a, b) =>
-              new Date(b.submittedAt) -
-              new Date(a.submittedAt)
+              new Date(
+                b.submittedAt
+              ) -
+              new Date(
+                a.submittedAt
+              )
           );
 
-      if (userPayments.length === 0) {
+      // ----------------------------------------------
+      // NO PAYMENT
+      // ----------------------------------------------
+
+      if (
+        userPayments.length === 0
+      ) {
         return res.json({
           success: true,
+
           pro: false,
-          status: "none",
-          expiresAt: null
+
+          status:
+            "none",
+
+          expiresAt:
+            null
         });
       }
 
@@ -520,10 +691,14 @@ app.get(
         userPayments[0];
 
       // ----------------------------------------------
-      // CHECK IF VERIFIED PRO IS STILL ACTIVE
+      // ACTIVE PRO
       // ----------------------------------------------
 
-      if (isProActive(payment)) {
+      if (
+        isProActive(
+          payment
+        )
+      ) {
         return res.json({
           success: true,
 
@@ -551,9 +726,12 @@ app.get(
       // ----------------------------------------------
 
       if (
-        payment.status === "verified" &&
+        payment.status ===
+          "verified" &&
         payment.expiresAt &&
-        new Date(payment.expiresAt).getTime() <=
+        new Date(
+          payment.expiresAt
+        ).getTime() <=
           Date.now()
       ) {
         return res.json({
@@ -591,7 +769,8 @@ app.get(
           "Free",
 
         expiresAt:
-          payment.expiresAt || null
+          payment.expiresAt ||
+          null
       });
 
     } catch (error) {
@@ -602,6 +781,7 @@ app.get(
 
       res.status(500).json({
         success: false,
+
         error:
           "Could not check payment status"
       });
@@ -613,9 +793,15 @@ app.get(
 // ADMIN AUTH
 // ======================================================
 
-function checkAdmin(req, res, next) {
+function checkAdmin(
+  req,
+  res,
+  next
+) {
   const password =
-    req.headers["x-admin-password"];
+    req.headers[
+      "x-admin-password"
+    ];
 
   if (
     !password ||
@@ -624,7 +810,9 @@ function checkAdmin(req, res, next) {
   ) {
     return res.status(401).json({
       success: false,
-      error: "Unauthorized"
+
+      error:
+        "Unauthorized"
     });
   }
 
@@ -645,6 +833,7 @@ app.get(
 
       res.json({
         success: true,
+
         payments
       });
 
@@ -656,6 +845,7 @@ app.get(
 
       res.status(500).json({
         success: false,
+
         error:
           "Could not load payments"
       });
@@ -672,12 +862,14 @@ app.post(
   checkAdmin,
   (req, res) => {
     try {
-      const { id } =
-        req.body;
+      const {
+        id
+      } = req.body;
 
       if (!id) {
         return res.status(400).json({
           success: false,
+
           error:
             "Payment ID is required"
         });
@@ -692,16 +884,21 @@ app.post(
             payment.id === id
         );
 
-      if (paymentIndex === -1) {
+      if (
+        paymentIndex === -1
+      ) {
         return res.status(404).json({
           success: false,
+
           error:
             "Payment not found"
         });
       }
 
       const payment =
-        payments[paymentIndex];
+        payments[
+          paymentIndex
+        ];
 
       const now =
         new Date();
@@ -714,7 +911,7 @@ app.post(
         now.toISOString();
 
       // ----------------------------------------------
-      // PRO EXPIRY = 30 DAYS
+      // PRO EXPIRY
       // ----------------------------------------------
 
       const expiresAt =
@@ -742,10 +939,13 @@ app.post(
       payment.expiresAt =
         expiresAt;
 
-      payments[paymentIndex] =
-        payment;
+      payments[
+        paymentIndex
+      ] = payment;
 
-      savePayments(payments);
+      savePayments(
+        payments
+      );
 
       console.log(
         `PRO ACTIVATED: ${payment.email}`
@@ -772,6 +972,7 @@ app.post(
 
       res.status(500).json({
         success: false,
+
         error:
           "Could not verify payment"
       });
@@ -788,12 +989,14 @@ app.post(
   checkAdmin,
   (req, res) => {
     try {
-      const { id } =
-        req.body;
+      const {
+        id
+      } = req.body;
 
       if (!id) {
         return res.status(400).json({
           success: false,
+
           error:
             "Payment ID is required"
         });
@@ -808,33 +1011,49 @@ app.post(
             payment.id === id
         );
 
-      if (paymentIndex === -1) {
+      if (
+        paymentIndex === -1
+      ) {
         return res.status(404).json({
           success: false,
+
           error:
             "Payment not found"
         });
       }
 
-      payments[paymentIndex].status =
+      payments[
+        paymentIndex
+      ].status =
         "rejected";
 
-      payments[paymentIndex].pro =
+      payments[
+        paymentIndex
+      ].pro =
         false;
 
-      payments[paymentIndex].verifiedAt =
+      payments[
+        paymentIndex
+      ].verifiedAt =
         null;
 
-      payments[paymentIndex].startedAt =
+      payments[
+        paymentIndex
+      ].startedAt =
         null;
 
-      payments[paymentIndex].expiresAt =
+      payments[
+        paymentIndex
+      ].expiresAt =
         null;
 
-      savePayments(payments);
+      savePayments(
+        payments
+      );
 
       res.json({
         success: true,
+
         message:
           "Payment rejected."
       });
@@ -847,6 +1066,7 @@ app.post(
 
       res.status(500).json({
         success: false,
+
         error:
           "Could not reject payment"
       });
@@ -858,12 +1078,16 @@ app.post(
 // 404
 // ======================================================
 
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    error: "Route not found"
-  });
-});
+app.use(
+  (req, res) => {
+    res.status(404).json({
+      success: false,
+
+      error:
+        "Route not found"
+    });
+  }
+);
 
 // ======================================================
 // SERVER
@@ -874,21 +1098,35 @@ const server =
     PORT,
     () => {
       console.log("");
+
       console.log(
         "======================================"
       );
+
       console.log(
         "🚀 Shree AI Backend Started"
       );
+
       console.log(
         `🌐 http://localhost:${PORT}`
       );
+
+      console.log(
+        "🤖 AI: Google Gemini"
+      );
+
+      console.log(
+        "🖼️ Images: Pollinations"
+      );
+
       console.log(
         "💎 Pro duration: 30 days"
       );
+
       console.log(
         "======================================"
       );
+
       console.log("");
     }
   );
@@ -904,8 +1142,10 @@ process.on(
       "\nShutting down server..."
     );
 
-    server.close(() => {
-      process.exit(0);
-    });
+    server.close(
+      () => {
+        process.exit(0);
+      }
+    );
   }
 );

@@ -8,19 +8,11 @@
 // API CONFIG
 // ======================================================
 
-const API_URL = "http://localhost:5000/api/chat";
-
-const IMAGE_API_URL =
-    "http://localhost:5000/api/image";
-
-const UPI_INFO_URL =
-    "http://localhost:5000/api/payment/upi-info";
-
-const UPI_PAYMENT_URL =
-    "http://localhost:5000/api/payment/upi";
-
-const UPI_STATUS_URL =
-    "http://localhost:5000/api/payment/status";
+const API_URL = "https://shree-ai-backend.onrender.com/api/chat";
+const IMAGE_API_URL = "https://shree-ai-backend.onrender.com/api/image";
+const UPI_INFO_URL = "https://shree-ai-backend.onrender.com/api/payment/upi-info";
+const UPI_PAYMENT_URL = "https://shree-ai-backend.onrender.com/api/payment/upi";
+const UPI_STATUS_URL = "https://shree-ai-backend.onrender.com/api/payment/status";
 
 
 // ======================================================
