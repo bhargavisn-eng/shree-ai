@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Shree AI Admin</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+
+            margin: 0;
+
+            font-family: Arial, sans-serif;
+
+            background: #000021;
+
+            color: white;
+
+            padding: 30px;
+
+        }
+
+
+        .container {
+
+            max-width: 1100px;
+
+            margin: auto;
+
+        }
+
+
+        h1 {
+
+            margin-bottom: 30px;
+
+        }
+
+
+        .login {
+
+            max-width: 400px;
+
+            margin: 100px auto;
+
+            background: #08083d;
+
+            padding: 30px;
+
+            border-radius: 15px;
+
+        }
+
+
+        input {
+
+            width: 100%;
+
+            padding: 13px;
+
+            margin: 8px 0;
+
+            background: #000021;
+
+            color: white;
+
+            border: 1px solid #33338a;
+
+            border-radius: 8px;
+
+        }
+
+
+        button {
+
+            padding: 10px 16px;
+
+            border: none;
+
+            border-radius: 8px;
+
+            cursor: pointer;
+
+            font-weight: bold;
+
+        }
+
+
+        #login-btn {
+
+            width: 100%;
+
+            margin-top: 10px;
+
+        }
+
+
+        .payment {
+
+            background: #08083d;
+
+            border: 1px solid #29297a;
+
+            border-radius: 15px;
+
+            padding: 20px;
+
+            margin-bottom: 15px;
+
+        }
+
+
+        .payment p {
+
+            margin: 8px 0;
+
+        }
+
+
+        .status {
+
+            display: inline-block;
+
+            padding: 5px 10px;
+
+            border-radius: 20px;
+
+            background: #202060;
+
+        }
+
+
+        .verify {
+
+            background: #ffffff;
+
+            color: #000021;
+
+            margin-right: 8px;
+
+        }
+
+
+        .reject {
+
+            background: #7a2222;
+
+            color: white;
+
+        }
+
+
+        #dashboard {
+
+            display: none;
+
+        }
+
+
+        #message {
+
+            margin-top: 10px;
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div class="container">
+
+
+    <div id="login-section" class="login">
+
+        <h2>🔐 Shree AI Admin</h2>
+
+        <p>Enter admin password</p>
+
+        <input
+            id="admin-password"
+            type="password"
+            placeholder="Admin password"
+        >
+
+        <button id="login-btn">
+            Login
+        </button>
+
+        <div id="login-message"></div>
+
+    </div>
+
+
+
+    <div id="dashboard">
+
+        <h1>💳 Payment Verification</h1>
+
+        <button id="refresh-btn">
+            Refresh Payments
+        </button>
+
+        <div id="payments"></div>
+
+    </div>
+
+
+</div>
+
+
+<script src="admin.js"></script>
+
+</body>
+
+</html>

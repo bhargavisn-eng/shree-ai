@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Shree AI</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- Chart -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+    <!-- =====================================================
+         SIDEBAR
+    ====================================================== -->
+
+    <aside id="sidebar">
+
+        <div class="sidebar-top">
+
+            <div class="brand">
+                <span class="brand-icon">🤖</span>
+                <span>Shree AI</span>
+            </div>
+
+            <button id="new-chat-btn" class="sidebar-btn">
+                ➕ New Chat
+            </button>
+
+            <button id="history-btn" class="sidebar-btn">
+                🕘 History
+            </button>
+
+            <button id="clear-history-btn" class="sidebar-btn">
+                🗑️ Clear History
+            </button>
+
+            <!-- IMPORTANT:
+                 Unique ID -->
+            <button
+                id="sidebar-premium-btn"
+                class="sidebar-btn premium-sidebar"
+            >
+                💎 <span id="sidebar-plan-text">Premium</span>
+            </button>
+
+            <button id="customize-btn" class="sidebar-btn">
+                ⚙️ Customize
+            </button>
+
+            <button id="theme-btn" class="sidebar-btn">
+                🌙 Theme
+            </button>
+
+        </div>
+
+
+        <!-- =================================================
+             HISTORY
+        ================================================== -->
+
+        <div id="history-panel">
+
+            <div class="history-header">
+
+                <span>Chat History</span>
+
+                <button id="close-history">
+                    ×
+                </button>
+
+            </div>
+
+            <div id="history-list"></div>
+
+        </div>
+
+    </aside>
+
+
+    <!-- =====================================================
+         MAIN
+    ====================================================== -->
+
+    <main id="main">
+
+        <!-- =================================================
+             NAVBAR
+        ================================================== -->
+
+        <nav id="navbar">
+
+            <div class="nav-left">
+
+                <button id="menu-btn">
+                    ☰
+                </button>
+
+                <div class="nav-logo">
+                    Shree AI 🤖
+                </div>
+
+            </div>
+
+
+            <div class="nav-right">
+
+                <button
+                    id="chart-btn"
+                    class="nav-btn"
+                    title="Usage"
+                >
+                    📊
+                </button>
+
+
+                <!-- Pro badge -->
+
+                <div
+                    id="pro-badge"
+                    class="pro-badge hidden"
+                >
+                    👑 PRO ACTIVE
+                </div>
+
+
+                <!-- IMPORTANT:
+                     Only ONE premium-btn -->
+
+                <button
+                    id="premium-btn"
+                    class="nav-premium-btn"
+                >
+                    👑
+                    <span id="plan-text">
+                        Free Plan
+                    </span>
+                </button>
+
+            </div>
+
+        </nav>
+
+
+        <!-- =================================================
+             CHAT
+        ================================================== -->
+
+        <section id="chat-container">
+
+            <div id="chat">
+
+                <!-- Welcome -->
+
+                <div id="welcome">
+
+                    <div id="logo">
+                        Shree AI 🤖
+                    </div>
+
+                    <h1>
+                        How can I help you today?
+                    </h1>
+
+                    <p>
+                        Ask me anything, create images,
+                        write code, learn something new,
+                        or just chat.
+                    </p>
+
+
+                    <div class="suggestions">
+
+                        <button class="suggestion">
+                            Explain JavaScript
+                        </button>
+
+                        <button class="suggestion">
+                            Help me learn Python
+                        </button>
+
+                        <button class="suggestion">
+                            Create a website
+                        </button>
+
+                        <button class="suggestion">
+                            Tell me something interesting
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- Messages -->
+
+                <div id="messages"></div>
+
+
+                <!-- Typing -->
+
+                <div
+                    id="typing"
+                    class="typing hidden"
+                >
+
+                    <span></span>
+                    <span></span>
+                    <span></span>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- =================================================
+             INPUT AREA
+        ================================================== -->
+
+        <section id="input-area">
+
+            <div id="input-box">
+
+                <textarea
+                    id="message"
+                    placeholder="Message Shree AI..."
+                    rows="1"
+                ></textarea>
+
+
+                <div id="input-buttons">
+
+                    <button
+                        id="voice-btn"
+                        title="Voice input"
+                    >
+                        🎤
+                    </button>
+
+
+                    <button
+                        id="generate-image-btn"
+                        title="Generate image"
+                    >
+                        🖼️
+                    </button>
+
+
+                    <button
+                        id="send-btn"
+                        title="Send"
+                    >
+                        ➤
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <div class="input-note">
+                Shree AI can make mistakes.
+                Check important information.
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- =====================================================
+         CHART MODAL
+    ====================================================== -->
+
+    <div
+        id="chart-modal"
+        class="modal hidden"
+    >
+
+        <div class="modal-box chart-box">
+
+            <button
+                id="close-chart"
+                class="close-btn"
+            >
+                ×
+            </button>
+
+            <h2>
+                📊 Shree AI Usage
+            </h2>
+
+            <p class="modal-description">
+                Your local chat activity.
+            </p>
+
+            <canvas id="usage-chart"></canvas>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         CUSTOMIZE MODAL
+    ====================================================== -->
+
+    <div
+        id="customize-modal"
+        class="modal hidden"
+    >
+
+        <div class="modal-box">
+
+            <button
+                id="close-customize"
+                class="close-btn"
+            >
+                ×
+            </button>
+
+
+            <h2>
+                ⚙️ Customize Shree AI
+            </h2>
+
+
+            <label>
+                AI Personality
+            </label>
+
+            <select id="personality">
+
+                <option value="friendly">
+                    Friendly
+                </option>
+
+                <option value="professional">
+                    Professional
+                </option>
+
+                <option value="creative">
+                    Creative
+                </option>
+
+                <option value="teacher">
+                    Teacher
+                </option>
+
+            </select>
+
+
+            <label>
+                Language
+            </label>
+
+            <select id="language">
+
+                <option value="English">
+                    English
+                </option>
+
+                <option value="Hindi">
+                    Hindi
+                </option>
+
+                <option value="Kannada">
+                    Kannada
+                </option>
+
+                <option value="Hinglish">
+                    Hinglish
+                </option>
+
+            </select>
+
+
+            <label>
+                Chat Font Size
+            </label>
+
+            <input
+                id="font-size"
+                type="range"
+                min="13"
+                max="22"
+                value="16"
+            >
+
+
+            <button
+                id="save-customize"
+                class="primary-btn"
+            >
+                Save Settings
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         PLANS MODAL
+    ====================================================== -->
+
+    <div
+        id="plans-modal"
+        class="modal hidden"
+    >
+
+        <div class="modal-box plans-box">
+
+            <button
+                id="close-plans"
+                class="close-btn"
+            >
+                ×
+            </button>
+
+
+            <h2>
+                💎 Shree AI Plans
+            </h2>
+
+            <p class="modal-description">
+                Choose your Shree AI plan.
+            </p>
+
+
+            <div class="plans">
+
+                <!-- FREE -->
+
+                <div class="plan-card">
+
+                    <h3>
+                        Free
+                    </h3>
+
+                    <div class="price">
+                        ₹0
+                        <small>/month</small>
+                    </div>
+
+
+                    <ul>
+
+                        <li>
+                            ✓ AI Chat
+                        </li>
+
+                        <li>
+                            ✓ Basic History
+                        </li>
+
+                        <li>
+                            ✓ Image Generation
+                        </li>
+
+                    </ul>
+
+
+                    <button
+                        id="free-plan-btn"
+                        class="plan-btn current-plan"
+                    >
+                        Current Plan
+                    </button>
+
+                </div>
+
+
+                <!-- PRO -->
+
+                <div class="plan-card featured">
+
+                    <div class="popular">
+                        POPULAR
+                    </div>
+
+
+                    <h3>
+                        Pro
+                    </h3>
+
+
+                    <div class="price">
+                        ₹199
+                        <small>/month</small>
+                    </div>
+
+
+                    <ul>
+
+                        <li>
+                            ✓ Everything in Free
+                        </li>
+
+                        <li>
+                            ✓ Pro access
+                        </li>
+
+                        <li>
+                            ✓ Priority features
+                        </li>
+
+                        <li>
+                            ✓ More usage
+                        </li>
+
+                    </ul>
+
+
+                    <button
+                        id="pro-buy-btn"
+                        class="plan-btn buy-plan"
+                        data-plan="Pro"
+                        data-amount="199"
+                    >
+                        Pay ₹199 with UPI
+                    </button>
+
+                </div>
+
+
+                <!-- PREMIUM -->
+
+                <div class="plan-card">
+
+                    <h3>
+                        Premium
+                    </h3>
+
+
+                    <div class="price">
+                        ₹499
+                        <small>/month</small>
+                    </div>
+
+
+                    <ul>
+
+                        <li>
+                            ✓ Everything in Pro
+                        </li>
+
+                        <li>
+                            ✓ Advanced features
+                        </li>
+
+                        <li>
+                            ✓ Higher limits
+                        </li>
+
+                    </ul>
+
+
+                    <button
+                        class="plan-btn premium-coming"
+                        disabled
+                    >
+                        Coming Soon
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         UPI PAYMENT MODAL
+    ====================================================== -->
+
+    <div
+        id="payment-modal"
+        class="modal hidden"
+    >
+
+        <div class="modal-box payment-box">
+
+            <button
+                id="close-payment"
+                class="close-btn"
+            >
+                ×
+            </button>
+
+
+            <h2>
+                💳 Pay with UPI
+            </h2>
+
+
+            <p class="modal-description">
+                Activate Shree AI Pro for ₹199/month.
+            </p>
+
+
+            <div class="payment-plan">
+
+                <strong id="selected-plan-name">
+                    Shree AI Pro
+                </strong>
+
+                <span id="selected-plan-amount">
+                    ₹199
+                </span>
+
+            </div>
+
+
+            <!-- QR -->
+
+            <div class="qr-section">
+
+                <h3>
+                    Scan & Pay
+                </h3>
+
+
+                <img
+                    id="upi-qr"
+                    src=""
+                    alt="UPI QR Code"
+                >
+
+
+                <p>
+                    Scan this QR using your UPI app.
+                </p>
+
+            </div>
+
+
+            <!-- UPI ID -->
+
+            <div class="upi-id-box">
+
+                <span>
+                    UPI ID
+                </span>
+
+
+                <strong id="upi-id">
+                    Loading...
+                </strong>
+
+
+                <button id="copy-upi">
+                    Copy
+                </button>
+
+            </div>
+
+
+            <div class="payment-divider">
+                OR
+            </div>
+
+
+            <!-- Payment form -->
+
+            <form id="payment-form">
+
+                <label for="payment-name">
+                    Your Name
+                </label>
+
+
+                <input
+                    id="payment-name"
+                    type="text"
+                    placeholder="Enter your name"
+                    required
+                >
+
+
+                <label for="payment-email">
+                    Email
+                </label>
+
+
+                <input
+                    id="payment-email"
+                    type="email"
+                    placeholder="Enter your email"
+                    required
+                >
+
+
+                <label for="transaction-id">
+                    UTR / Transaction ID
+                </label>
+
+
+                <input
+                    id="transaction-id"
+                    type="text"
+                    placeholder="Enter UPI transaction ID"
+                    required
+                >
+
+
+                <p class="payment-help">
+                    After completing the ₹199 payment,
+                    enter the UTR/Transaction ID shown
+                    by your UPI app.
+                </p>
+
+
+                <button
+                    id="submit-payment"
+                    type="submit"
+                    class="primary-btn"
+                >
+                    Submit Payment Details
+                </button>
+
+            </form>
+
+
+            <div
+                id="payment-message"
+                class="payment-message"
+            ></div>
+
+
+            <p class="payment-warning">
+                ⚠️ Payment is manually verified
+                by the Shree AI admin.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- =====================================================
+         SCRIPT
+    ====================================================== -->
+
+    <script src="script.js"></script>
+
+</body>
+</html>
